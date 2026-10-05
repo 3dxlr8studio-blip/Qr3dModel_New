@@ -1,163 +1,8 @@
-import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-
-const container =
-  document.querySelector("#ar-container");
-
-const startButton =
-  document.querySelector("#start");
-
-const statusEl =
-  document.querySelector("#status");
-
-const hintEl =
-  document.querySelector("#hint");
-
-
-// ==============================
-// THREE.JS SETUP
-// ==============================
-
-const scene =
-  new THREE.Scene();
-
-const camera =
-  new THREE.PerspectiveCamera(
-    60,
-    window.innerWidth / window.innerHeight,
-    0.01,
-    100
-  );
-
-camera.position.set(0, 0, 0);
-
-
-// ==============================
-// RENDERER
-// ==============================
-
-const renderer =
-  new THREE.WebGLRenderer({
-    alpha: true,
-    antialias: true
-  });
-
-renderer.setSize(
-  window.innerWidth,
-  window.innerHeight
-);
-
-renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio, 2)
-);
-
-renderer.domElement.style.position =
-  "fixed";
-
-renderer.domElement.style.top =
-  "0";
-
-renderer.domElement.style.left =
-  "0";
-
-renderer.domElement.style.width =
-  "100%";
-
-renderer.domElement.style.height =
-  "100%";
-
-renderer.domElement.style.zIndex =
-  "1";
-
-renderer.domElement.style.pointerEvents =
-  "none";
-
-container.appendChild(
-  renderer.domElement
-);
-
-
-// ==============================
-// CAMERA VIDEO
-// ==============================
-
-const video =
-  document.createElement("video");
-
-video.autoplay = true;
-video.muted = true;
-video.playsInline = true;
-
-video.style.position =
-  "fixed";
-
-video.style.top =
-  "0";
-
-video.style.left =
-  "0";
-
-video.style.width =
-  "100%";
-
-video.style.height =
-  "100%";
-
-video.style.objectFit =
-  "cover";
-
-video.style.zIndex =
-  "0";
-
-container.appendChild(
-  video
-);
-
-
-// ==============================
-// LIGHTING
-// ==============================
-
-const ambient =
-  new THREE.HemisphereLight(
-    0xffffff,
-    0x444444,
-    2
-  );
-
-scene.add(ambient);
-
-
-const light =
-  new THREE.DirectionalLight(
-    0xffffff,
-    3
-  );
-
-light.position.set(
-  2,
-  3,
-  4
-);
-
-scene.add(light);
-
-
 // ==============================
 // LOAD MODEL
 // ==============================
 
-const modelContainer =
-  new THREE.Group();
-
-scene.add(
-  modelContainer
-);
-
-
-const loader =
-  new GLTFLoader();
-
+const loader = new GLTFLoader();
 
 loader.load(
 
@@ -165,27 +10,68 @@ loader.load(
 
   function(gltf) {
 
-    const model =
-      gltf.scene;
+    console.log("MODEL LOADED SUCCESSFULLY");
 
-    modelContainer.add(
-      model
-    );
+    const model = gltf.scene;
 
-
-    model.scale.set(
-      0.5,
-      0.5,
-      0.5
-    );
+    scene.add(model);
 
 
-    model.position.set(
-      0,
-      -0.3,
-      -2
-    );
+    // --------------------------------
+    // AUTOMATICALLY CENTER THE MODEL
+    // --------------------------------
 
+    const box =
+      new THREE.Box3().setFromObject(model);
+
+    const size =
+      new THREE.Vector3();
+
+    const center =
+      new THREE.Vector3();
+
+    box.getSize(size);
+    box.getCenter(center);
+
+
+    // Move model origin to center
+    model.position.x -= center.x;
+    model.position.y -= center.y;
+    model.position.z -= center.z;
+
+
+    // --------------------------------
+    // AUTOMATIC SCALE
+    // --------------------------------
+
+    const maxDimension =
+      Math.max(
+        size.x,
+        size.y,
+        size.z
+      );
+
+
+    const desiredSize = 1;
+
+    const scale =
+      desiredSize /
+      maxDimension;
+
+
+    model.scale.setScalar(scale);
+
+
+    // --------------------------------
+    // PLACE IN FRONT OF CAMERA
+    // --------------------------------
+
+    model.position.z -= 2;
+
+
+    // --------------------------------
+    // ROTATION
+    // --------------------------------
 
     model.rotation.set(
       0,
@@ -195,31 +81,66 @@ loader.load(
 
 
     statusEl.textContent =
-      "Model ready — press Start AR";
+      "Model loaded ✓";
+
+
+    hintEl.textContent =
+      "3D model should be visible in front of you.";
+
+
+    console.log(
+      "MODEL SIZE:",
+      size
+    );
+
+    console.log(
+      "MODEL SCALE:",
+      scale
+    );
 
   },
 
 
-  undefined,
+  function(progress) {
+
+    if (progress.total) {
+
+      const percent =
+        progress.loaded /
+        progress.total *
+        100;
+
+      console.log(
+        "Loading:",
+        percent.toFixed(0) + "%"
+      );
+
+    }
+
+  },
 
 
   function(error) {
 
     console.error(
-      "MODEL ERROR:",
+      "MODEL LOAD ERROR:",
       error
     );
 
 
-    // fallback test cube
+    statusEl.textContent =
+      "GLB failed to load";
+
+
+    // TEST CUBE
 
     const cube =
       new THREE.Mesh(
 
         new THREE.BoxGeometry(
-          0.6,
-          0.6,
-          0.6
+          0.7,
+          0.7,
+          0.7
         ),
 
         new THREE.MeshStandardMaterial({
@@ -236,143 +157,11 @@ loader.load(
     );
 
 
-    modelContainer.add(
-      cube
-    );
-
-
-    statusEl.textContent =
-      "Demo cube ready";
-
-  }
-
-);
-
-
-// ==============================
-// START CAMERA
-// ==============================
-
-async function startAR() {
-
-  startButton.classList.add(
-    "hidden"
-  );
-
-
-  statusEl.textContent =
-    "Opening camera…";
-
-
-  try {
-
-    const stream =
-      await navigator.mediaDevices.getUserMedia({
-
-        audio: false,
-
-        video: {
-          facingMode: {
-            ideal: "environment"
-          }
-        }
-
-      });
-
-
-    video.srcObject =
-      stream;
-
-
-    await video.play();
-
-
-    statusEl.textContent =
-      "Camera ready";
+    scene.add(cube);
 
 
     hintEl.textContent =
-      "3D model should appear in front of you.";
-
-
-    animate();
-
-  }
-
-
-  catch(error) {
-
-    console.error(error);
-
-
-    statusEl.textContent =
-      "Camera error: " +
-      error.message;
-
-
-    startButton.classList.remove(
-      "hidden"
-    );
-
-  }
-
-}
-
-
-// ==============================
-// BUTTON
-// ==============================
-
-startButton.addEventListener(
-
-  "click",
-
-  startAR
-
-);
-
-
-// ==============================
-// ANIMATION LOOP
-// ==============================
-
-function animate() {
-
-  requestAnimationFrame(
-    animate
-  );
-
-
-  renderer.render(
-    scene,
-    camera
-  );
-
-}
-
-
-// ==============================
-// RESIZE
-// ==============================
-
-window.addEventListener(
-
-  "resize",
-
-  () => {
-
-    camera.aspect =
-      window.innerWidth /
-      window.innerHeight;
-
-
-    camera.updateProjectionMatrix();
-
-
-    renderer.setSize(
-      window.innerWidth,
-      window.innerHeight
-    );
+      "GLB failed. Red test cube shown.";
 
   }
 
