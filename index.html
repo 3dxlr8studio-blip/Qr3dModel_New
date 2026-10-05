@@ -1,48 +1,55 @@
 <!doctype html>
 <html lang="en">
+
 <head>
+
   <meta charset="utf-8">
 
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
   >
 
-  <title>XLR8 WebAR</title>
+  <title>XLR8 WebXR AR</title>
 
-  <link rel="stylesheet" href="./style.css">
+  <link
+    rel="stylesheet"
+    href="./style.css"
+  >
 
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      "three":
+        "https://unpkg.com/three@0.160.0/build/three.module.js",
+
+      "three/addons/":
+        "https://unpkg.com/three@0.160.0/examples/jsm/"
     }
   }
   </script>
+
 </head>
+
 
 <body>
 
-  <div id="ar-container"></div>
-
   <div id="ui">
 
-    <div id="top">
-      <div id="status">
-        Loading...
-      </div>
+    <div id="status">
+      Loading AR...
     </div>
 
     <button id="start">
-      Start AR Camera
+      Start AR
     </button>
 
     <div id="hint">
-      Tap Start and allow camera permission.
+      Move your phone around to detect a floor or table.
     </div>
 
   </div>
+
 
   <script
     type="module"
@@ -50,4 +57,5 @@
   </script>
 
 </body>
+
 </html>
