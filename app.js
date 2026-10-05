@@ -2,30 +2,44 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MindARThree } from "mindar-image-three";
 
-const container = document.querySelector("#ar-container");
-const startButton = document.querySelector("#start");
-const statusEl = document.querySelector("#status");
-const hintEl = document.querySelector("#hint");
+
+// ================================
+// HTML ELEMENTS
+// ================================
+
+const container =
+  document.querySelector("#ar-container");
+
+const startButton =
+  document.querySelector("#start");
+
+const statusEl =
+  document.querySelector("#status");
+
+const hintEl =
+  document.querySelector("#hint");
 
 
-// ======================================================
-// MINDAR SETUP
-// ======================================================
+// ================================
+// MINDAR
+// ================================
 
-const mindarThree = new MindARThree({
+const mindarThree =
+  new MindARThree({
 
-  container: container,
+    container: container,
 
-  // TEST TARGET
-  imageTargetSrc:
-    "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind",
+    // SAME QR compiled into target.mind
+    imageTargetSrc:
+      "./targets/target.mind",
 
-  maxTrack: 1,
+    maxTrack: 1,
 
-  uiLoading: "no",
-  uiScanning: "no",
-  uiError: "no"
-});
+    uiLoading: "no",
+    uiScanning: "no",
+    uiError: "no"
+
+  });
 
 
 const {
@@ -35,57 +49,61 @@ const {
 } = mindarThree;
 
 
-// ======================================================
+// ================================
 // RENDERER
-// ======================================================
+// ================================
 
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.outputColorSpace =
+  THREE.SRGBColorSpace;
 
 renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio, 2)
+  Math.min(
+    window.devicePixelRatio,
+    2
+  )
 );
 
 
-// ======================================================
+// ================================
 // LIGHTING
-// ======================================================
+// ================================
 
-const ambientLight =
+const hemi =
   new THREE.HemisphereLight(
     0xffffff,
     0x444444,
     2.5
   );
 
-scene.add(ambientLight);
+scene.add(hemi);
 
 
-const mainLight =
+const light =
   new THREE.DirectionalLight(
     0xffffff,
     3
   );
 
-mainLight.position.set(
+light.position.set(
   1,
   2,
   3
 );
 
-scene.add(mainLight);
+scene.add(light);
 
 
-// ======================================================
-// TARGET
-// ======================================================
+// ================================
+// QR TARGET
+// ================================
 
 const anchor =
   mindarThree.addAnchor(0);
 
 
-// ======================================================
-// MODEL CONTAINER
-// ======================================================
+// ================================
+// MODEL
+// ================================
 
 const modelContainer =
   new THREE.Group();
@@ -95,10 +113,6 @@ anchor.group.add(
 );
 
 
-// ======================================================
-// LOAD GLB
-// ======================================================
-
 const loader =
   new GLTFLoader();
 
@@ -107,18 +121,17 @@ loader.load(
 
   "./models/model.glb",
 
-  function (gltf) {
+  function(gltf) {
 
     const model =
       gltf.scene;
-
 
     modelContainer.add(
       model
     );
 
 
-    // MODEL SIZE
+    // SIZE
     model.scale.set(
       0.8,
       0.8,
@@ -126,7 +139,7 @@ loader.load(
     );
 
 
-    // MODEL POSITION
+    // POSITION ABOVE QR
     model.position.set(
       0,
       0,
@@ -134,7 +147,7 @@ loader.load(
     );
 
 
-    // MODEL ROTATION
+    // ROTATION
     model.rotation.set(
       Math.PI / 2,
       0,
@@ -151,45 +164,29 @@ loader.load(
   undefined,
 
 
-  function (error) {
+  function(error) {
 
     console.error(
-      "MODEL LOAD ERROR:",
+      "MODEL ERROR:",
       error
     );
 
 
-    /*
-      FALLBACK CUBE
-
-      If your GLB fails,
-      you should still see this.
-    */
-
-    const geometry =
-      new THREE.BoxGeometry(
-        0.5,
-        0.5,
-        0.5
-      );
-
-
-    const material =
-      new THREE.MeshStandardMaterial({
-
-        color: 0x35a7ff,
-
-        roughness: 0.4,
-
-        metalness: 0.1
-
-      });
-
+    // fallback cube
 
     const cube =
       new THREE.Mesh(
-        geometry,
-        material
+
+        new THREE.BoxGeometry(
+          0.5,
+          0.5,
+          0.5
+        ),
+
+        new THREE.MeshStandardMaterial({
+          color: 0x35a7ff
+        })
+
       );
 
 
@@ -206,117 +203,116 @@ loader.load(
 
 
     statusEl.textContent =
-      "Demo cube loaded — press Start AR";
+      "Demo cube loaded";
 
   }
 
 );
 
 
-// ======================================================
+// ================================
 // TARGET EVENTS
-// ======================================================
+// ================================
 
-anchor.onTargetFound = () => {
+anchor.onTargetFound =
+  () => {
 
-  console.log(
-    "TARGET FOUND"
-  );
-
-
-  statusEl.textContent =
-    "Target found ✓";
+    console.log(
+      "QR TARGET FOUND"
+    );
 
 
-  hintEl.textContent =
-    "3D model is attached to the target.";
-
-};
+    statusEl.textContent =
+      "QR detected ✓";
 
 
-anchor.onTargetLost = () => {
+    hintEl.textContent =
+      "3D model is attached to the QR.";
 
-  console.log(
-    "TARGET LOST"
-  );
-
-
-  statusEl.textContent =
-    "Target lost";
+  };
 
 
-  hintEl.textContent =
-    "Point the camera back at the target image.";
+anchor.onTargetLost =
+  () => {
 
-};
+    console.log(
+      "QR TARGET LOST"
+    );
 
 
-// ======================================================
-// MAKE CAMERA VIDEO VISIBLE
-// ======================================================
+    statusEl.textContent =
+      "QR lost";
+
+
+    hintEl.textContent =
+      "Point camera back at the QR.";
+
+  };
+
+
+// ================================
+// CAMERA DISPLAY FIX
+// ================================
 
 function fixCameraDisplay() {
 
-  /*
-    MindAR creates its own video element.
-
-    These styles force it to fill
-    the phone screen instead of
-    remaining black/hidden.
-  */
-
   const videos =
-    container.querySelectorAll("video");
+    document.querySelectorAll(
+      "video"
+    );
 
 
-  videos.forEach((video) => {
+  videos.forEach(
+    (video) => {
 
-    video.style.position =
-      "fixed";
-
-    video.style.top =
-      "0";
-
-    video.style.left =
-      "0";
-
-    video.style.width =
-      "100vw";
-
-    video.style.height =
-      "100vh";
-
-    video.style.objectFit =
-      "cover";
-
-    video.style.zIndex =
-      "0";
-
-    video.style.display =
-      "block";
-
-    video.style.visibility =
-      "visible";
-
-    video.style.opacity =
-      "1";
-
-  });
+      video.setAttribute(
+        "playsinline",
+        ""
+      );
 
 
-  /*
-    Three.js canvas sits over camera
-  */
+      video.style.position =
+        "fixed";
 
-  if (renderer.domElement) {
+      video.style.top =
+        "0";
+
+      video.style.left =
+        "0";
+
+      video.style.width =
+        "100vw";
+
+      video.style.height =
+        "100vh";
+
+      video.style.objectFit =
+        "cover";
+
+      video.style.zIndex =
+        "0";
+
+      video.style.display =
+        "block";
+
+      video.style.visibility =
+        "visible";
+
+      video.style.opacity =
+        "1";
+
+    }
+  );
+
+
+  if (
+    renderer.domElement
+  ) {
 
     renderer.domElement.style.position =
       "fixed";
 
-    renderer.domElement.style.top =
-      "0";
-
-    renderer.domElement.style.left =
+    renderer.domElement.style.inset =
       "0";
 
     renderer.domElement.style.width =
@@ -328,16 +324,20 @@ function fixCameraDisplay() {
     renderer.domElement.style.zIndex =
       "1";
 
+    renderer.domElement.style.background =
+      "transparent";
+
   }
 
 }
 
 
-// ======================================================
+// ================================
 // START AR
-// ======================================================
+// ================================
 
-let arStarted = false;
+let arStarted =
+  false;
 
 
 async function startAR() {
@@ -352,9 +352,6 @@ async function startAR() {
 
     statusEl.textContent =
       "HTTPS required";
-
-    hintEl.textContent =
-      "Camera AR only works through HTTPS.";
 
     return;
 
@@ -378,13 +375,6 @@ async function startAR() {
     true;
 
 
-  /*
-    Hide button immediately.
-
-    If something fails,
-    we show it again.
-  */
-
   startButton.classList.add(
     "hidden"
   );
@@ -395,7 +385,7 @@ async function startAR() {
 
 
   hintEl.textContent =
-    "Allow camera permission if asked.";
+    "Allow camera permission.";
 
 
   try {
@@ -408,23 +398,8 @@ async function startAR() {
       true;
 
 
-    console.log(
-      "MINDAR STARTED"
-    );
-
-
-    /*
-      Force camera/video visibility
-    */
-
     fixCameraDisplay();
 
-
-    /*
-      Run again after a short delay
-      because MindAR sometimes creates
-      the video slightly later.
-    */
 
     setTimeout(
       fixCameraDisplay,
@@ -439,16 +414,12 @@ async function startAR() {
 
 
     statusEl.textContent =
-      "Camera ready — point at target image";
+      "Camera ready — point at QR";
 
 
     hintEl.textContent =
-      "Point camera at the MindAR test card.";
+      "Point camera at the same QR you scanned.";
 
-
-    /*
-      Start rendering
-    */
 
     renderer.setAnimationLoop(
       () => {
@@ -465,7 +436,7 @@ async function startAR() {
   }
 
 
-  catch (error) {
+  catch(error) {
 
 
     console.error(
@@ -498,16 +469,16 @@ async function startAR() {
 
 
     hintEl.textContent =
-      "Check camera permission and reload the page.";
+      "Check camera permission and reload.";
 
   }
 
 }
 
 
-// ======================================================
-// BUTTON
-// ======================================================
+// ================================
+// START BUTTON
+// ================================
 
 startButton.addEventListener(
 
@@ -518,9 +489,9 @@ startButton.addEventListener(
 );
 
 
-// ======================================================
-// STOP CAMERA WHEN PAGE CLOSES
-// ======================================================
+// ================================
+// STOP CAMERA
+// ================================
 
 window.addEventListener(
 
@@ -538,7 +509,7 @@ window.addEventListener(
 
     }
 
-    catch (error) {
+    catch(error) {
 
       console.warn(
         error
