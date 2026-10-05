@@ -2,29 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+  >
+
   <title>XLR8 WebAR</title>
+
   <link rel="stylesheet" href="./style.css">
 
   <script type="importmap">
   {
     "imports": {
       "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
     }
   }
   </script>
 </head>
+
 <body>
+
   <div id="ar-container"></div>
 
   <div id="ui">
-    <div id="top"><div id="status">Loading AR…</div></div>
-    <button id="start">Start AR Camera</button>
-    <div id="hint">Tap Start, allow the camera, then point it at the target image.</div>
+
+    <div id="top">
+      <div id="status">
+        Loading...
+      </div>
+    </div>
+
+    <button id="start">
+      Start AR Camera
+    </button>
+
+    <div id="hint">
+      Tap Start and allow camera permission.
+    </div>
+
   </div>
 
-  <script type="module" src="./app.js"></script>
+  <script
+    type="module"
+    src="./app.js">
+  </script>
+
 </body>
 </html>
