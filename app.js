@@ -1,11 +1,5 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { MindARThree } from "mindar-image-three";
-
-
-// ======================================================
-// HTML
-// ======================================================
 
 const container =
   document.querySelector("#ar-container");
@@ -20,62 +14,118 @@ const hintEl =
   document.querySelector("#hint");
 
 
-// ======================================================
-// MINDAR SETUP
-// ======================================================
+// ==============================
+// THREE.JS SETUP
+// ==============================
 
-const mindarThree =
-  new MindARThree({
+const scene =
+  new THREE.Scene();
 
-    container: container,
+const camera =
+  new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.01,
+    100
+  );
 
-    // Your QR compiled into target.mind
-    imageTargetSrc:
-      "./targets/target.mind",
+camera.position.set(0, 0, 0);
 
-    maxTrack: 1,
 
-    uiLoading: "no",
-    uiScanning: "no",
-    uiError: "no"
+// ==============================
+// RENDERER
+// ==============================
 
+const renderer =
+  new THREE.WebGLRenderer({
+    alpha: true,
+    antialias: true
   });
 
-
-const {
-  renderer,
-  scene,
-  camera
-} = mindarThree;
-
-
-// ======================================================
-// RENDERER
-// ======================================================
-
-renderer.outputColorSpace =
-  THREE.SRGBColorSpace;
+renderer.setSize(
+  window.innerWidth,
+  window.innerHeight
+);
 
 renderer.setPixelRatio(
-  Math.min(
-    window.devicePixelRatio,
-    2
-  )
+  Math.min(window.devicePixelRatio, 2)
+);
+
+renderer.domElement.style.position =
+  "fixed";
+
+renderer.domElement.style.top =
+  "0";
+
+renderer.domElement.style.left =
+  "0";
+
+renderer.domElement.style.width =
+  "100%";
+
+renderer.domElement.style.height =
+  "100%";
+
+renderer.domElement.style.zIndex =
+  "1";
+
+renderer.domElement.style.pointerEvents =
+  "none";
+
+container.appendChild(
+  renderer.domElement
 );
 
 
-// ======================================================
-// LIGHTING
-// ======================================================
+// ==============================
+// CAMERA VIDEO
+// ==============================
 
-const hemi =
+const video =
+  document.createElement("video");
+
+video.autoplay = true;
+video.muted = true;
+video.playsInline = true;
+
+video.style.position =
+  "fixed";
+
+video.style.top =
+  "0";
+
+video.style.left =
+  "0";
+
+video.style.width =
+  "100%";
+
+video.style.height =
+  "100%";
+
+video.style.objectFit =
+  "cover";
+
+video.style.zIndex =
+  "0";
+
+container.appendChild(
+  video
+);
+
+
+// ==============================
+// LIGHTING
+// ==============================
+
+const ambient =
   new THREE.HemisphereLight(
     0xffffff,
     0x444444,
-    2.5
+    2
   );
 
-scene.add(hemi);
+scene.add(ambient);
 
 
 const light =
@@ -85,69 +135,25 @@ const light =
   );
 
 light.position.set(
-  1,
   2,
-  3
+  3,
+  4
 );
 
 scene.add(light);
 
 
-// ======================================================
-// TARGET ANCHOR
-// ======================================================
-
-const anchor =
-  mindarThree.addAnchor(0);
-
-
-// ======================================================
-// MODEL CONTAINER
-// ======================================================
+// ==============================
+// LOAD MODEL
+// ==============================
 
 const modelContainer =
   new THREE.Group();
 
-anchor.group.add(
+scene.add(
   modelContainer
 );
 
-
-// ======================================================
-// RED TEST CUBE
-// ======================================================
-
-const testCube =
-  new THREE.Mesh(
-
-    new THREE.BoxGeometry(
-      0.4,
-      0.4,
-      0.4
-    ),
-
-    new THREE.MeshStandardMaterial({
-      color: 0xff0000
-    })
-
-  );
-
-
-testCube.position.set(
-  0,
-  0,
-  0.25
-);
-
-
-modelContainer.add(
-  testCube
-);
-
-
-// ======================================================
-// LOAD GLB MODEL
-// ======================================================
 
 const loader =
   new GLTFLoader();
@@ -159,32 +165,25 @@ loader.load(
 
   function(gltf) {
 
-    console.log(
-      "MODEL LOADED SUCCESSFULLY"
-    );
-
-
     const model =
       gltf.scene;
-
 
     modelContainer.add(
       model
     );
 
 
-    // Start safe
     model.scale.set(
-      0.1,
-      0.1,
-      0.1
+      0.5,
+      0.5,
+      0.5
     );
 
 
     model.position.set(
       0,
-      0,
-      0
+      -0.3,
+      -2
     );
 
 
@@ -196,223 +195,65 @@ loader.load(
 
 
     statusEl.textContent =
-      "Model loaded — press Start AR";
+      "Model ready — press Start AR";
 
   },
 
 
-  function(progress) {
-
-    if (
-      progress.total
-    ) {
-
-      const percent =
-        (
-          progress.loaded /
-          progress.total
-        ) * 100;
-
-
-      console.log(
-        "MODEL LOADING:",
-        percent.toFixed(0) + "%"
-      );
-
-    }
-
-  },
+  undefined,
 
 
   function(error) {
 
     console.error(
-      "MODEL LOAD ERROR:",
+      "MODEL ERROR:",
       error
     );
 
 
+    // fallback test cube
+
+    const cube =
+      new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+          0.6,
+          0.6,
+          0.6
+        ),
+
+        new THREE.MeshStandardMaterial({
+          color: 0xff0000
+        })
+
+      );
+
+
+    cube.position.set(
+      0,
+      0,
+      -2
+    );
+
+
+    modelContainer.add(
+      cube
+    );
+
+
     statusEl.textContent =
-      "Model failed to load — cube will still test AR";
+      "Demo cube ready";
 
   }
 
 );
 
 
-// ======================================================
-// TARGET EVENTS
-// ======================================================
-
-anchor.onTargetFound =
-  () => {
-
-    console.log(
-      "QR TARGET FOUND"
-    );
-
-
-    statusEl.textContent =
-      "QR detected ✓";
-
-
-    hintEl.textContent =
-      "If you see the red cube, target tracking is working.";
-
-  };
-
-
-anchor.onTargetLost =
-  () => {
-
-    console.log(
-      "QR TARGET LOST"
-    );
-
-
-    statusEl.textContent =
-      "QR lost";
-
-
-    hintEl.textContent =
-      "Point the camera back at the QR.";
-
-  };
-
-
-// ======================================================
-// CAMERA DISPLAY FIX
-// ======================================================
-
-function fixCameraDisplay() {
-
-  const videos =
-    document.querySelectorAll(
-      "video"
-    );
-
-
-  console.log(
-    "VIDEO COUNT:",
-    videos.length
-  );
-
-
-  videos.forEach(
-    (video) => {
-
-      video.setAttribute(
-        "playsinline",
-        ""
-      );
-
-
-      video.style.position =
-        "fixed";
-
-      video.style.top =
-        "0";
-
-      video.style.left =
-        "0";
-
-      video.style.width =
-        "100vw";
-
-      video.style.height =
-        "100vh";
-
-      video.style.objectFit =
-        "cover";
-
-      video.style.zIndex =
-        "0";
-
-      video.style.display =
-        "block";
-
-      video.style.visibility =
-        "visible";
-
-      video.style.opacity =
-        "1";
-
-    }
-  );
-
-
-  if (
-    renderer.domElement
-  ) {
-
-    renderer.domElement.style.position =
-      "fixed";
-
-    renderer.domElement.style.inset =
-      "0";
-
-    renderer.domElement.style.width =
-      "100vw";
-
-    renderer.domElement.style.height =
-      "100vh";
-
-    renderer.domElement.style.zIndex =
-      "1";
-
-    renderer.domElement.style.background =
-      "transparent";
-
-  }
-
-}
-
-
-// ======================================================
-// START AR
-// ======================================================
-
-let arStarted =
-  false;
-
+// ==============================
+// START CAMERA
+// ==============================
 
 async function startAR() {
-
-
-  if (arStarted) {
-    return;
-  }
-
-
-  if (!window.isSecureContext) {
-
-    statusEl.textContent =
-      "HTTPS required";
-
-    hintEl.textContent =
-      "Open the page using HTTPS.";
-
-    return;
-
-  }
-
-
-  if (
-    !navigator.mediaDevices ||
-    !navigator.mediaDevices.getUserMedia
-  ) {
-
-    statusEl.textContent =
-      "Camera not supported";
-
-    return;
-
-  }
-
-
-  startButton.disabled =
-    true;
-
 
   startButton.classList.add(
     "hidden"
@@ -423,106 +264,64 @@ async function startAR() {
     "Opening camera…";
 
 
-  hintEl.textContent =
-    "Allow camera permission.";
-
-
   try {
 
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
 
-    await mindarThree.start();
+        audio: false,
 
+        video: {
+          facingMode: {
+            ideal: "environment"
+          }
+        }
 
-    arStarted =
-      true;
-
-
-    console.log(
-      "MINDAR STARTED"
-    );
-
-
-    fixCameraDisplay();
+      });
 
 
-    setTimeout(
-      fixCameraDisplay,
-      300
-    );
+    video.srcObject =
+      stream;
 
 
-    setTimeout(
-      fixCameraDisplay,
-      1000
-    );
+    await video.play();
 
 
     statusEl.textContent =
-      "Camera ready — point at QR";
+      "Camera ready";
 
 
     hintEl.textContent =
-      "Point camera at the same QR used to make target.mind.";
+      "3D model should appear in front of you.";
 
 
-    renderer.setAnimationLoop(
-      () => {
-
-        renderer.render(
-          scene,
-          camera
-        );
-
-      }
-    );
-
+    animate();
 
   }
 
 
   catch(error) {
 
-
-    console.error(
-      "AR START ERROR:",
-      error
-    );
+    console.error(error);
 
 
-    arStarted =
-      false;
-
-
-    startButton.disabled =
-      false;
+    statusEl.textContent =
+      "Camera error: " +
+      error.message;
 
 
     startButton.classList.remove(
       "hidden"
     );
 
-
-    statusEl.textContent =
-
-      "AR error: " +
-
-      (
-        error?.message ||
-        error
-      );
-
-
-    hintEl.textContent =
-      "Check camera permission and reload.";
-
   }
 
 }
 
 
-// ======================================================
-// START BUTTON
-// ======================================================
+// ==============================
+// BUTTON
+// ==============================
 
 startButton.addEventListener(
 
@@ -533,33 +332,47 @@ startButton.addEventListener(
 );
 
 
-// ======================================================
-// CLEANUP
-// ======================================================
+// ==============================
+// ANIMATION LOOP
+// ==============================
+
+function animate() {
+
+  requestAnimationFrame(
+    animate
+  );
+
+
+  renderer.render(
+    scene,
+    camera
+  );
+
+}
+
+
+// ==============================
+// RESIZE
+// ==============================
 
 window.addEventListener(
 
-  "pagehide",
+  "resize",
 
   () => {
 
-    try {
+    camera.aspect =
+      window.innerWidth /
+      window.innerHeight;
 
-      if (arStarted) {
 
-        mindarThree.stop();
+    camera.updateProjectionMatrix();
 
-      }
 
-    }
-
-    catch(error) {
-
-      console.warn(
-        error
-      );
-
-    }
+    renderer.setSize(
+      window.innerWidth,
+      window.innerHeight
+    );
 
   }
 
