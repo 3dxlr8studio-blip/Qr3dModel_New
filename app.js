@@ -3,9 +3,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MindARThree } from "mindar-image-three";
 
 
-// ================================
-// HTML ELEMENTS
-// ================================
+// ======================================================
+// HTML
+// ======================================================
 
 const container =
   document.querySelector("#ar-container");
@@ -20,16 +20,16 @@ const hintEl =
   document.querySelector("#hint");
 
 
-// ================================
-// MINDAR
-// ================================
+// ======================================================
+// MINDAR SETUP
+// ======================================================
 
 const mindarThree =
   new MindARThree({
 
     container: container,
 
-    // SAME QR compiled into target.mind
+    // Your QR compiled into target.mind
     imageTargetSrc:
       "./targets/target.mind",
 
@@ -49,9 +49,9 @@ const {
 } = mindarThree;
 
 
-// ================================
+// ======================================================
 // RENDERER
-// ================================
+// ======================================================
 
 renderer.outputColorSpace =
   THREE.SRGBColorSpace;
@@ -64,9 +64,9 @@ renderer.setPixelRatio(
 );
 
 
-// ================================
+// ======================================================
 // LIGHTING
-// ================================
+// ======================================================
 
 const hemi =
   new THREE.HemisphereLight(
@@ -93,17 +93,17 @@ light.position.set(
 scene.add(light);
 
 
-// ================================
-// QR TARGET
-// ================================
+// ======================================================
+// TARGET ANCHOR
+// ======================================================
 
 const anchor =
   mindarThree.addAnchor(0);
 
 
-// ================================
-// MODEL
-// ================================
+// ======================================================
+// MODEL CONTAINER
+// ======================================================
 
 const modelContainer =
   new THREE.Group();
@@ -112,6 +112,42 @@ anchor.group.add(
   modelContainer
 );
 
+
+// ======================================================
+// RED TEST CUBE
+// ======================================================
+
+const testCube =
+  new THREE.Mesh(
+
+    new THREE.BoxGeometry(
+      0.4,
+      0.4,
+      0.4
+    ),
+
+    new THREE.MeshStandardMaterial({
+      color: 0xff0000
+    })
+
+  );
+
+
+testCube.position.set(
+  0,
+  0,
+  0.25
+);
+
+
+modelContainer.add(
+  testCube
+);
+
+
+// ======================================================
+// LOAD GLB MODEL
+// ======================================================
 
 const loader =
   new GLTFLoader();
@@ -123,33 +159,37 @@ loader.load(
 
   function(gltf) {
 
+    console.log(
+      "MODEL LOADED SUCCESSFULLY"
+    );
+
+
     const model =
       gltf.scene;
+
 
     modelContainer.add(
       model
     );
 
 
-    // SIZE
+    // Start safe
     model.scale.set(
-      0.8,
-      0.8,
-      0.8
+      0.1,
+      0.1,
+      0.1
     );
 
 
-    // POSITION ABOVE QR
     model.position.set(
       0,
       0,
-      0.2
+      0
     );
 
 
-    // ROTATION
     model.rotation.set(
-      Math.PI / 2,
+      0,
       0,
       0
     );
@@ -161,58 +201,48 @@ loader.load(
   },
 
 
-  undefined,
+  function(progress) {
+
+    if (
+      progress.total
+    ) {
+
+      const percent =
+        (
+          progress.loaded /
+          progress.total
+        ) * 100;
+
+
+      console.log(
+        "MODEL LOADING:",
+        percent.toFixed(0) + "%"
+      );
+
+    }
+
+  },
 
 
   function(error) {
 
     console.error(
-      "MODEL ERROR:",
+      "MODEL LOAD ERROR:",
       error
     );
 
 
-    // fallback cube
-
-    const cube =
-      new THREE.Mesh(
-
-        new THREE.BoxGeometry(
-          0.5,
-          0.5,
-          0.5
-        ),
-
-        new THREE.MeshStandardMaterial({
-          color: 0x35a7ff
-        })
-
-      );
-
-
-    cube.position.set(
-      0,
-      0,
-      0.25
-    );
-
-
-    modelContainer.add(
-      cube
-    );
-
-
     statusEl.textContent =
-      "Demo cube loaded";
+      "Model failed to load — cube will still test AR";
 
   }
 
 );
 
 
-// ================================
+// ======================================================
 // TARGET EVENTS
-// ================================
+// ======================================================
 
 anchor.onTargetFound =
   () => {
@@ -227,7 +257,7 @@ anchor.onTargetFound =
 
 
     hintEl.textContent =
-      "3D model is attached to the QR.";
+      "If you see the red cube, target tracking is working.";
 
   };
 
@@ -245,14 +275,14 @@ anchor.onTargetLost =
 
 
     hintEl.textContent =
-      "Point camera back at the QR.";
+      "Point the camera back at the QR.";
 
   };
 
 
-// ================================
+// ======================================================
 // CAMERA DISPLAY FIX
-// ================================
+// ======================================================
 
 function fixCameraDisplay() {
 
@@ -260,6 +290,12 @@ function fixCameraDisplay() {
     document.querySelectorAll(
       "video"
     );
+
+
+  console.log(
+    "VIDEO COUNT:",
+    videos.length
+  );
 
 
   videos.forEach(
@@ -332,9 +368,9 @@ function fixCameraDisplay() {
 }
 
 
-// ================================
+// ======================================================
 // START AR
-// ================================
+// ======================================================
 
 let arStarted =
   false;
@@ -352,6 +388,9 @@ async function startAR() {
 
     statusEl.textContent =
       "HTTPS required";
+
+    hintEl.textContent =
+      "Open the page using HTTPS.";
 
     return;
 
@@ -398,6 +437,11 @@ async function startAR() {
       true;
 
 
+    console.log(
+      "MINDAR STARTED"
+    );
+
+
     fixCameraDisplay();
 
 
@@ -418,7 +462,7 @@ async function startAR() {
 
 
     hintEl.textContent =
-      "Point camera at the same QR you scanned.";
+      "Point camera at the same QR used to make target.mind.";
 
 
     renderer.setAnimationLoop(
@@ -476,9 +520,9 @@ async function startAR() {
 }
 
 
-// ================================
+// ======================================================
 // START BUTTON
-// ================================
+// ======================================================
 
 startButton.addEventListener(
 
@@ -489,9 +533,9 @@ startButton.addEventListener(
 );
 
 
-// ================================
-// STOP CAMERA
-// ================================
+// ======================================================
+// CLEANUP
+// ======================================================
 
 window.addEventListener(
 
