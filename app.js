@@ -1,105 +1,132 @@
-import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { MindARThree } from "mindar-image-three";
-
+const sceneEl = document.querySelector("#arScene");
+const startButton = document.querySelector("#startButton");
 const statusEl = document.querySelector("#status");
-const startBtn = document.querySelector("#start");
-const hintEl = document.querySelector("#hint");
+const helpEl = document.querySelector("#help");
+const targetEl = document.querySelector("#target");
 
-const mindarThree = new MindARThree({
-  container: document.querySelector("#ar-container"),
+let arStarted = false;
 
-  // For this starter, this is MindAR's official sample target.
-  // Later replace this URL with your own self-hosted file:
-  // imageTargetSrc: "./targets/target.mind"
-  imageTargetSrc:
-    "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind",
+function setStatus(text) {
+  statusEl.textContent = text;
+}
 
-  maxTrack: 1,
-  uiLoading: "no",
-  uiScanning: "no",
-  uiError: "no"
-});
+function setHelp(text) {
+  helpEl.textContent = text;
+}
 
-const { renderer, scene, camera } = mindarThree;
+async function waitForScene() {
+  if (sceneEl.hasLoaded) return;
 
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-scene.add(new THREE.HemisphereLight(0xffffff, 0x555555, 2.4));
-
-const key = new THREE.DirectionalLight(0xffffff, 2.5);
-key.position.set(1.5, 2.5, 3);
-scene.add(key);
-
-const anchor = mindarThree.addAnchor(0);
-
-const modelRoot = new THREE.Group();
-anchor.group.add(modelRoot);
-
-const loader = new GLTFLoader();
-
-loader.load(
-  "./models/model.glb",
-  (gltf) => {
-    const model = gltf.scene;
-    modelRoot.add(model);
-
-    // Adjust these values for your real model.
-    model.scale.setScalar(0.8);
-    model.position.set(0, 0, 0.25);
-    model.rotation.set(Math.PI / 2, 0, 0);
-
-    statusEl.textContent = "Model ready. Start AR.";
-  },
-  undefined,
-  (err) => {
-    console.error(err);
-
-    // Visible fallback if the GLB is missing/broken.
-    const geometry = new THREE.BoxGeometry(0.45, 0.45, 0.45);
-    const material = new THREE.MeshStandardMaterial({ color: 0x35a7ff });
-    const cube = new THREE.Mesh(geometry, material);
-    cube.position.set(0, 0, 0.25);
-    modelRoot.add(cube);
-
-    statusEl.textContent = "Demo object ready. Start AR.";
-  }
-);
-
-anchor.onTargetFound = () => {
-  statusEl.textContent = "Target found ✓";
-  hintEl.textContent = "Move the phone slowly; the model is locked to the image.";
-};
-
-anchor.onTargetLost = () => {
-  statusEl.textContent = "Target lost — point back at the image";
-  hintEl.textContent = "Point the camera at the target image again.";
-};
+  await new Promise((resolve) => {
+    sceneEl.addEventListener("loaded", resolve, { once: true });
+  });
+}
 
 async function startAR() {
-  startBtn.disabled = true;
-  statusEl.textContent = "Opening camera…";
+  if (arStarted) return;
+
+  startButton.disabled = true;
+
+  setStatus("Checking camera...");
+  setHelp("Please allow camera permission when your browser asks.");
 
   try {
-    await mindarThree.start();
+    if (!window.isSecureContext) {
+      throw new Error("This page must be opened over HTTPS.");
+    }
 
-    startBtn.classList.add("hidden");
-    statusEl.textContent = "Camera ready — point at the target image";
-    hintEl.textContent = "Use the supplied MindAR sample target for this prototype.";
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("Camera access is not supported in this browser.");
+    }
 
-    renderer.setAnimationLoop(() => {
-      renderer.render(scene, camera);
-    });
-  } catch (err) {
-    console.error(err);
-    startBtn.disabled = false;
-    statusEl.textContent =
-      "Camera could not start. Use HTTPS and allow camera permission.";
+    await waitForScene();
+
+    const mindarSystem =
+      sceneEl.systems["mindar-image-system"];
+
+    if (!mindarSystem) {
+      throw new Error("MindAR did not load correctly.");
+    }
+
+    setStatus("Opening camera...");
+
+    await mindarSystem.start();
+
+    arStarted = true;
+
+    startButton.classList.add("hidden");
+
+    setStatus("Camera ready — find the target image");
+    setHelp("Point the phone at the test target image.");
+
+  } catch (error) {
+    console.error("AR START ERROR:", error);
+
+    startButton.disabled = false;
+    startButton.classList.remove("hidden");
+
+    setStatus(
+      "AR error: " +
+      (error && error.message ? error.message : String(error))
+    );
+
+    setHelp(
+      "Open directly in Chrome on Android or Safari on iPhone, then allow camera access."
+    );
   }
 }
 
-startBtn.addEventListener("click", startAR);
+startButton.addEventListener("click", startAR);
 
-window.addEventListener("beforeunload", () => {
-  try { mindarThree.stop(); } catch (_) {}
+
+targetEl.addEventListener("targetFound", () => {
+  setStatus("Target found ✓");
+
+  setHelp(
+    "3D model is now attached to the target image."
+  );
+});
+
+
+targetEl.addEventListener("targetLost", () => {
+  if (!arStarted) return;
+
+  setStatus("Target lost");
+
+  setHelp(
+    "Point the camera back at the target image."
+  );
+});
+
+
+sceneEl.addEventListener("arReady", () => {
+  console.log("MindAR AR ready");
+});
+
+
+sceneEl.addEventListener("arError", (event) => {
+  console.error("MindAR AR error:", event);
+
+  setStatus("MindAR camera error");
+
+  setHelp(
+    "Check camera permission, HTTPS, and browser compatibility."
+  );
+
+  startButton.disabled = false;
+  startButton.classList.remove("hidden");
+});
+
+
+window.addEventListener("pagehide", () => {
+  try {
+    const mindarSystem =
+      sceneEl.systems["mindar-image-system"];
+
+    if (mindarSystem && arStarted) {
+      mindarSystem.stop();
+    }
+  } catch (error) {
+    console.warn(error);
+  }
 });
