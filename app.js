@@ -1,251 +1,327 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+import {
+  GLTFLoader
+} from "three/addons/loaders/GLTFLoader.js";
 
 
-// ========================================
-// HTML ELEMENTS
-// ========================================
+// ======================================================
+// UI
+// ======================================================
 
-const container = document.querySelector("#ar-container");
-const startButton = document.querySelector("#start");
-const statusEl = document.querySelector("#status");
-const hintEl = document.querySelector("#hint");
+const startButton =
+  document.querySelector("#start");
 
-statusEl.textContent = "JavaScript loaded";
+const statusEl =
+  document.querySelector("#status");
+
+const hintEl =
+  document.querySelector("#hint");
 
 
-// ========================================
-// THREE SCENE
-// ========================================
+statusEl.textContent =
+  "Checking WebXR...";
 
-const scene = new THREE.Scene();
 
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
-  0.01,
-  100
+// ======================================================
+// THREE.JS SETUP
+// ======================================================
+
+const scene =
+  new THREE.Scene();
+
+
+const camera =
+  new THREE.PerspectiveCamera();
+
+
+scene.add(
+  new THREE.HemisphereLight(
+    0xffffff,
+    0x555555,
+    2.5
+  )
 );
 
-camera.position.set(0, 0, 0);
+
+const directionalLight =
+  new THREE.DirectionalLight(
+    0xffffff,
+    2.5
+  );
 
 
-// ========================================
+directionalLight.position.set(
+  1,
+  2,
+  3
+);
+
+
+scene.add(
+  directionalLight
+);
+
+
+// ======================================================
 // RENDERER
-// ========================================
+// ======================================================
 
-const renderer = new THREE.WebGLRenderer({
-  alpha: true,
-  antialias: true
-});
+const renderer =
+  new THREE.WebGLRenderer({
 
-renderer.setSize(
-  window.innerWidth,
-  window.innerHeight
-);
+    alpha: true,
+
+    antialias: true
+
+  });
+
 
 renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio, 2)
+
+  Math.min(
+    window.devicePixelRatio,
+    2
+  )
+
 );
+
+
+renderer.setSize(
+
+  window.innerWidth,
+
+  window.innerHeight
+
+);
+
+
+renderer.xr.enabled =
+  true;
+
 
 renderer.setClearColor(
   0x000000,
   0
 );
 
-renderer.domElement.style.position = "fixed";
-renderer.domElement.style.inset = "0";
-renderer.domElement.style.width = "100vw";
-renderer.domElement.style.height = "100vh";
-renderer.domElement.style.zIndex = "2";
-renderer.domElement.style.pointerEvents = "none";
 
-container.appendChild(renderer.domElement);
-
-
-// ========================================
-// PHONE CAMERA VIDEO
-// ========================================
-
-const video = document.createElement("video");
-
-video.autoplay = true;
-video.muted = true;
-video.playsInline = true;
-
-video.setAttribute(
-  "playsinline",
-  ""
+document.body.appendChild(
+  renderer.domElement
 );
 
-video.style.position = "fixed";
-video.style.inset = "0";
-video.style.width = "100vw";
-video.style.height = "100vh";
-video.style.objectFit = "cover";
-video.style.zIndex = "0";
 
-container.appendChild(video);
+// ======================================================
+// RETICLE
+// ======================================================
 
-
-// ========================================
-// LIGHTING
-// ========================================
-
-scene.add(
-  new THREE.HemisphereLight(
-    0xffffff,
-    0x555555,
-    3
-  )
-);
-
-const directionalLight =
-  new THREE.DirectionalLight(
-    0xffffff,
-    4
-  );
-
-directionalLight.position.set(
-  2,
-  3,
-  4
-);
-
-scene.add(directionalLight);
-
-
-// ========================================
-// CREATE ANCHOR
-// ========================================
-
-const anchor = new THREE.Group();
-
-anchor.position.set(
-  0,
-  0,
-  -2
-);
-
-scene.add(anchor);
-
-
-// ========================================
-// ANCHOR RING
-// ========================================
-
-const anchorRing =
+const reticle =
   new THREE.Mesh(
 
     new THREE.RingGeometry(
-      0.42,
-      0.48,
-      48
+      0.08,
+      0.11,
+      32
+    )
+    .rotateX(
+      -Math.PI / 2
     ),
 
     new THREE.MeshBasicMaterial({
-      color: 0x00ff88,
-      side: THREE.DoubleSide
+
+      color:
+        0x00ff88,
+
+      side:
+        THREE.DoubleSide
+
     })
 
   );
 
-anchorRing.position.set(
-  0,
-  -0.65,
-  0
+
+reticle.matrixAutoUpdate =
+  false;
+
+
+reticle.visible =
+  false;
+
+
+scene.add(
+  reticle
 );
 
-anchor.add(anchorRing);
+
+// ======================================================
+// MODEL VARIABLES
+// ======================================================
+
+let model =
+  null;
 
 
-// ========================================
-// LOAD MODEL
-// ========================================
+let modelReady =
+  false;
 
-const loader = new GLTFLoader();
 
-let model = null;
+let modelScale =
+  1;
+
+
+// Model position inside its own local group
+let modelLocalOffset =
+  new THREE.Vector3();
+
+
+// ======================================================
+// MODEL PIVOT
+// ======================================================
+//
+// We place this group at the hit-test position.
+// The GLB itself stays inside it.
+//
+// This is safer than directly applying the reticle
+// transform to the GLB.
+
+const modelAnchor =
+  new THREE.Group();
+
+
+modelAnchor.visible =
+  false;
+
+
+scene.add(
+  modelAnchor
+);
+
+
+// ======================================================
+// LOAD GLB
+// ======================================================
+
+const loader =
+  new GLTFLoader();
+
 
 loader.load(
 
   "./models/model.glb",
 
+
   function(gltf) {
 
-    console.log("MODEL LOADED");
 
-    model = gltf.scene;
+    console.log(
+      "MODEL LOADED"
+    );
 
-    anchor.add(model);
+
+    model =
+      gltf.scene;
 
 
-    // -------------------------------
-    // GET MODEL SIZE
-    // -------------------------------
+    modelAnchor.add(
+      model
+    );
+
+
+    // ==================================================
+    // ORIGINAL SIZE
+    // ==================================================
 
     const box =
       new THREE.Box3()
-      .setFromObject(model);
+      .setFromObject(
+        model
+      );
+
 
     const size =
       new THREE.Vector3();
 
-    box.getSize(size);
+
+    box.getSize(
+      size
+    );
 
 
     const maxDimension =
       Math.max(
+
         size.x,
+
         size.y,
+
         size.z
+
       );
 
 
-    // -------------------------------
+    // ==================================================
     // AUTO SCALE
-    // -------------------------------
+    // ==================================================
 
-    if (maxDimension > 0) {
+    if (
+      maxDimension > 0
+    ) {
 
-      const desiredSize = 1;
 
-      const scale =
+      const desiredSize =
+        0.6;
+
+
+      modelScale =
         desiredSize /
         maxDimension;
 
-      model.scale.setScalar(scale);
+
+      model.scale.setScalar(
+        modelScale
+      );
 
     }
 
 
-    // -------------------------------
+    // ==================================================
     // RECALCULATE AFTER SCALE
-    // -------------------------------
+    // ==================================================
 
     const scaledBox =
       new THREE.Box3()
-      .setFromObject(model);
+      .setFromObject(
+        model
+      );
+
 
     const center =
       new THREE.Vector3();
 
-    scaledBox.getCenter(center);
 
-
-    // -------------------------------
-    // CENTER MODEL ON ANCHOR
-    // -------------------------------
-
-    model.position.set(
-      -center.x,
-      -center.y,
-      -center.z
+    scaledBox.getCenter(
+      center
     );
 
 
-    // Raise slightly above anchor
-    model.position.y += 0.15;
+    // ==================================================
+    // PLACE MODEL BASE ON Y=0
+    // ==================================================
+
+    model.position.set(
+
+      -center.x,
+
+      -scaledBox.min.y,
+
+      -center.z
+
+    );
+
+
+    modelLocalOffset.copy(
+      model.position
+    );
 
 
     model.rotation.set(
@@ -255,27 +331,41 @@ loader.load(
     );
 
 
+    modelReady =
+      true;
+
+
     statusEl.textContent =
-      "Model anchored ✓";
+      "Model ready — Start AR";
+
 
     hintEl.textContent =
-      "Press Start AR Camera";
+      "Tap Start AR, then move phone around.";
 
   },
 
 
   function(progress) {
 
-    if (progress.total) {
+
+    if (
+      progress.total
+    ) {
+
 
       const percent =
+
         progress.loaded /
         progress.total *
         100;
 
+
       statusEl.textContent =
+
         "Loading model " +
+
         percent.toFixed(0) +
+
         "%";
 
     }
@@ -285,8 +375,9 @@ loader.load(
 
   function(error) {
 
+
     console.error(
-      "MODEL ERROR:",
+      "MODEL LOAD ERROR:",
       error
     );
 
@@ -295,81 +386,297 @@ loader.load(
       "Model failed to load";
 
 
-    // Fallback cube
-
-    const cube =
-      new THREE.Mesh(
-
-        new THREE.BoxGeometry(
-          0.5,
-          0.5,
-          0.5
-        ),
-
-        new THREE.MeshStandardMaterial({
-          color: 0xff0000
-        })
-
-      );
-
-
-    cube.position.set(
-      0,
-      0,
-      0
-    );
-
-
-    anchor.add(cube);
-
-
     hintEl.textContent =
-      "Red cube shown instead.";
+      "Check models/model.glb";
 
   }
 
 );
 
 
-// ========================================
-// START CAMERA
-// ========================================
+// ======================================================
+// XR VARIABLES
+// ======================================================
 
-let started = false;
-
-async function startAR() {
-
-  if (started) return;
+let xrSession =
+  null;
 
 
-  statusEl.textContent =
-    "Opening camera...";
+let referenceSpace =
+  null;
+
+
+let viewerSpace =
+  null;
+
+
+let hitTestSource =
+  null;
+
+
+let placed =
+  false;
+
+
+// Store the latest detected pose
+let currentHitPose =
+  null;
+
+
+// ======================================================
+// CHECK XR SUPPORT
+// ======================================================
+
+async function checkXR() {
+
+
+  if (
+    !window.isSecureContext
+  ) {
+
+
+    statusEl.textContent =
+      "HTTPS required";
+
+
+    hintEl.textContent =
+      "WebXR requires HTTPS.";
+
+
+    startButton.disabled =
+      true;
+
+
+    return;
+
+  }
+
+
+  if (
+    !navigator.xr
+  ) {
+
+
+    statusEl.textContent =
+      "WebXR unavailable";
+
+
+    hintEl.textContent =
+      "Use Android Chrome on an ARCore-compatible phone.";
+
+
+    startButton.disabled =
+      true;
+
+
+    return;
+
+  }
 
 
   try {
 
-    const stream =
-      await navigator.mediaDevices
-      .getUserMedia({
 
-        audio: false,
+    const supported =
 
-        video: {
-          facingMode: {
-            ideal: "environment"
+      await navigator.xr
+      .isSessionSupported(
+        "immersive-ar"
+      );
+
+
+    if (
+      supported
+    ) {
+
+
+      statusEl.textContent =
+        modelReady
+          ? "Ready — Start AR"
+          : "WebXR supported ✓";
+
+
+      startButton.disabled =
+        false;
+
+    }
+
+
+    else {
+
+
+      statusEl.textContent =
+        "Immersive AR not supported";
+
+
+      hintEl.textContent =
+        "This phone/browser does not support WebXR AR.";
+
+
+      startButton.disabled =
+        true;
+
+    }
+
+  }
+
+
+  catch(error) {
+
+
+    console.error(
+      "XR SUPPORT CHECK ERROR:",
+      error
+    );
+
+
+    statusEl.textContent =
+      "Could not check WebXR";
+
+
+    startButton.disabled =
+      true;
+
+  }
+
+}
+
+
+// ======================================================
+// START AR
+// ======================================================
+
+async function startAR() {
+
+
+  if (
+    xrSession
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+
+    statusEl.textContent =
+      "Starting AR...";
+
+
+    hintEl.textContent =
+      "Allow AR/camera permission.";
+
+
+    xrSession =
+
+      await navigator.xr
+      .requestSession(
+
+        "immersive-ar",
+
+        {
+
+          requiredFeatures: [
+
+            "hit-test"
+
+          ],
+
+          optionalFeatures: [
+
+            "anchors",
+
+            "dom-overlay",
+
+            "local-floor"
+
+          ],
+
+          domOverlay: {
+
+            root:
+              document.body
+
           }
+
         }
+
+      );
+
+
+    // ==================================================
+    // CONNECT SESSION TO THREE
+    // ==================================================
+
+    await renderer.xr.setSession(
+      xrSession
+    );
+
+
+    // ==================================================
+    // REFERENCE SPACES
+    // ==================================================
+
+    try {
+
+
+      referenceSpace =
+
+        await xrSession
+        .requestReferenceSpace(
+          "local-floor"
+        );
+
+
+    }
+
+
+    catch(error) {
+
+
+      console.warn(
+        "local-floor unavailable, using local"
+      );
+
+
+      referenceSpace =
+
+        await xrSession
+        .requestReferenceSpace(
+          "local"
+        );
+
+    }
+
+
+    viewerSpace =
+
+      await xrSession
+      .requestReferenceSpace(
+        "viewer"
+      );
+
+
+    // ==================================================
+    // HIT TEST SOURCE
+    // ==================================================
+
+    hitTestSource =
+
+      await xrSession
+      .requestHitTestSource({
+
+        space:
+          viewerSpace
 
       });
 
 
-    video.srcObject = stream;
-
-    await video.play();
-
-
-    started = true;
-
+    // ==================================================
+    // UI
+    // ==================================================
 
     startButton.classList.add(
       "hidden"
@@ -377,54 +684,190 @@ async function startAR() {
 
 
     statusEl.textContent =
-      "Camera ready ✓";
+      "Searching for surface...";
 
 
     hintEl.textContent =
-      "Model is attached to anchor";
+      "Move phone slowly over a floor or table.";
 
 
-    animate();
+    placed =
+      false;
+
+
+    currentHitPose =
+      null;
+
+
+    modelAnchor.visible =
+      false;
+
+
+    // ==================================================
+    // TAP EVENT
+    // ==================================================
+
+    xrSession.addEventListener(
+      "select",
+      placeModel
+    );
+
+
+    // ==================================================
+    // END EVENT
+    // ==================================================
+
+    xrSession.addEventListener(
+
+      "end",
+
+      onSessionEnd
+
+    );
+
+
+    // ==================================================
+    // RENDER LOOP
+    // ==================================================
+
+    renderer.setAnimationLoop(
+      renderXR
+    );
+
 
   }
 
 
   catch(error) {
 
+
     console.error(
-      "CAMERA ERROR:",
+      "XR START ERROR:",
       error
     );
 
 
+    xrSession =
+      null;
+
+
     statusEl.textContent =
-      "Camera error: " +
-      error.message;
+
+      "AR error: " +
+
+      (
+        error?.message ||
+        error
+      );
+
+
+    hintEl.textContent =
+      "Check Chrome, ARCore support, camera permission, and HTTPS.";
+
+
+    startButton.classList.remove(
+      "hidden"
+    );
 
   }
 
 }
 
 
-// ========================================
-// START BUTTON
-// ========================================
+// ======================================================
+// XR FRAME LOOP
+// ======================================================
 
-startButton.addEventListener(
-  "click",
-  startAR
-);
+function renderXR(
+
+  time,
+
+  frame
+
+) {
 
 
-// ========================================
-// RENDER LOOP
-// ========================================
+  if (
+    frame &&
+    hitTestSource &&
+    referenceSpace &&
+    !placed
+  ) {
 
-function animate() {
 
-  requestAnimationFrame(
-    animate
-  );
+    const results =
+
+      frame.getHitTestResults(
+        hitTestSource
+      );
+
+
+    if (
+      results.length > 0
+    ) {
+
+
+      const hit =
+        results[0];
+
+
+      const pose =
+        hit.getPose(
+          referenceSpace
+        );
+
+
+      if (
+        pose
+      ) {
+
+
+        currentHitPose =
+          pose;
+
+
+        reticle.visible =
+          true;
+
+
+        reticle.matrix.fromArray(
+          pose.transform.matrix
+        );
+
+
+        statusEl.textContent =
+          "Surface found ✓";
+
+
+        hintEl.textContent =
+          "Tap screen to place the model.";
+
+      }
+
+    }
+
+
+    else {
+
+
+      currentHitPose =
+        null;
+
+
+      reticle.visible =
+        false;
+
+
+      statusEl.textContent =
+        "Searching for surface...";
+
+
+      hintEl.textContent =
+        "Move phone slowly over floor or table.";
+
+    }
+
+  }
 
 
   renderer.render(
@@ -435,48 +878,201 @@ function animate() {
 }
 
 
-// ========================================
+// ======================================================
+// PLACE MODEL
+// ======================================================
+
+function placeModel() {
+
+
+  if (
+    placed ||
+    !modelReady ||
+    !currentHitPose
+  ) {
+
+
+    return;
+
+  }
+
+
+  const transform =
+    currentHitPose.transform;
+
+
+  // ==================================================
+  // POSITION
+  // ==================================================
+
+  modelAnchor.position.set(
+
+    transform.position.x,
+
+    transform.position.y,
+
+    transform.position.z
+
+  );
+
+
+  // ==================================================
+  // ORIENTATION
+  // ==================================================
+
+  modelAnchor.quaternion.set(
+
+    transform.orientation.x,
+
+    transform.orientation.y,
+
+    transform.orientation.z,
+
+    transform.orientation.w
+
+  );
+
+
+  // ==================================================
+  // IMPORTANT:
+  // KEEP MODEL SCALE + LOCAL OFFSET
+  // ==================================================
+
+  model.scale.setScalar(
+    modelScale
+  );
+
+
+  model.position.copy(
+    modelLocalOffset
+  );
+
+
+  // ==================================================
+  // SHOW MODEL
+  // ==================================================
+
+  modelAnchor.visible =
+    true;
+
+
+  placed =
+    true;
+
+
+  reticle.visible =
+    false;
+
+
+  statusEl.textContent =
+    "Model placed ✓";
+
+
+  hintEl.textContent =
+    "Walk around it — it should stay in this world position.";
+
+}
+
+
+// ======================================================
+// END XR
+// ======================================================
+
+function onSessionEnd() {
+
+
+  renderer.setAnimationLoop(
+    null
+  );
+
+
+  xrSession =
+    null;
+
+
+  referenceSpace =
+    null;
+
+
+  viewerSpace =
+    null;
+
+
+  hitTestSource =
+    null;
+
+
+  currentHitPose =
+    null;
+
+
+  placed =
+    false;
+
+
+  reticle.visible =
+    false;
+
+
+  modelAnchor.visible =
+    false;
+
+
+  startButton.classList.remove(
+    "hidden"
+  );
+
+
+  statusEl.textContent =
+    "AR ended";
+
+
+  hintEl.textContent =
+    "Press Start AR to begin again.";
+
+}
+
+
+// ======================================================
+// START BUTTON
+// ======================================================
+
+startButton.addEventListener(
+  "click",
+  startAR
+);
+
+
+// ======================================================
 // RESIZE
-// ========================================
+// ======================================================
 
 window.addEventListener(
+
   "resize",
-  () => {
 
-    camera.aspect =
-      window.innerWidth /
-      window.innerHeight;
-
-
-    camera.updateProjectionMatrix();
+  function() {
 
 
     renderer.setSize(
+
       window.innerWidth,
+
       window.innerHeight
+
     );
 
   }
+
 );
 
 
-// ========================================
-// CLEANUP
-// ========================================
+// ======================================================
+// INITIAL CHECK
+// ======================================================
 
-window.addEventListener(
-  "pagehide",
-  () => {
+startButton.disabled =
+  true;
 
-    if (video.srcObject) {
 
-      video.srcObject
-        .getTracks()
-        .forEach(
-          track => track.stop()
-        );
-
-    }
-
-  }
-);
+checkXR();
