@@ -31,7 +31,7 @@ const mindarThree =
 
     // Your QR compiled into target.mind
     imageTargetSrc:
-      "./targets/target.mind",
+      "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind",
 
     maxTrack: 1,
 
